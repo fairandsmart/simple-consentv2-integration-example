@@ -1,0 +1,10 @@
+{
+  "theme": "theme.iframe.integration.test.001",
+  "updatable": true,
+  "validity": "P6M",
+  "language": "fr",
+  "origin": "WEBFORM",
+  "confirmation": "NONE",
+  "sendInvitation": false,
+  "layout": "layout.iframe.integration.test.001"
+}

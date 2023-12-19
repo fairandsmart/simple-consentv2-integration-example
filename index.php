@@ -1,5 +1,5 @@
 <?php
-function get_conf()
+function getConf()
 {
     $config = parse_ini_file(key_exists("CONFIG_FILE_PATH", $_ENV) ? $_ENV["CONFIG_FILE_PATH"] : "config.ini");
     $config["auth_url"] = key_exists("AUTH_URL", $_ENV) ? $_ENV["AUTH_URL"] : $config["auth_url"];
@@ -13,17 +13,23 @@ function get_conf()
 
 function getToken()
 {
-    $config = get_conf();
+    $config = getConf();
     $auth_url = $config["auth_url"];
     $auth_realm = $config["auth_realm"];
     $auth_client_id = $config["auth_client_id"];
     $auth_username = $config["auth_username"];
     $auth_password = $config["auth_password"];
 
+    $curl_url = $auth_url . "/realms/" . $auth_realm . "/protocol/openid-connect/token";
+    $curl_postfields = "grant_type=password&client_id=" . $auth_client_id .
+        "&username=" . urlencode($auth_username) .
+        "&password=" . urlencode($auth_password);
+
     $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, $auth_url . "/realms/" . $auth_realm . "/protocol/openid-connect/token");
-    curl_setopt($curl, CURLOPT_POSTFIELDS, "grant_type=password&client_id=" . $auth_client_id . "&username=" . urlencode($auth_username) . "&password=" . urlencode($auth_password));
+    curl_setopt($curl, CURLOPT_URL, $curl_url);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $curl_postfields);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
     $response = curl_exec($curl);
     curl_errno($curl) > 0 && error_log("while getting token : " . curl_error($curl));
     curl_close($curl);
@@ -31,45 +37,28 @@ function getToken()
     return json_decode($response)->access_token;
 }
 
+function getPayload()
+{
+    $payload = file_get_contents(key_exists("PAYLOAD_FILE_PATH", $_ENV) ? $_ENV["PAYLOAD_FILE_PATH"] : "payload.json");
+    return json_decode($payload, true);
+}
+
 function getFormUrl()
 {
-    $uuid = array_key_exists("uuid", $_GET) ? $_GET["uuid"] : uniqid();
-    $email = array_key_exists("email", $_GET) ? $_GET["email"] : "nobody@exemple.com";
     $token = getToken();
+    $config = getConf();
 
-    $config = get_conf();
+    $context = getPayload();
+    $context["subject"] = array_key_exists("uuid", $_GET) ? $_GET["uuid"] : uniqid();
 
-    $host = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : $_SERVER['HTTP_HOST'];
-    $port = isset($_SERVER['HTTP_X_FORWARDED_PORT']) ? $_SERVER['HTTP_X_FORWARDED_PORT'] : "";
-    $proto = isset($_SERVER['HTTPS']) ? "https" : "http";
-    $proto = isset($_SERVER['HTTP_X_FORWARDED_PROTO']) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : $proto;
-    $me = $proto . "://" . $host . ($port ? ":" . $port : "") . $_SERVER['DOCUMENT_URI'];
-
-    $context = [
-        "subject" => $uuid,
-        "theme" => "theme.002",
-        "callback" => "",
-        "object" => "",
-        "updatable" => true,
-        "iframeOrigin" => "",
-        "validity" => "P6M",
-        "language" => "fr",
-        "subjectInfos" => [
-            "emailAddress" => ""
-        ],
-        "origin" => "WEBFORM",
-        "confirmation" => "NONE",
-        "confirmationConfig" => [
-            "senderEmail" => ""
-        ],
-        "sendInvitation" => false,
-        "layout" => "layout.iframe.integration.test.001"
-    ];
+    $curl_url = $config["cm_url"] . "/consents";
+    $curl_postfields = json_encode($context);
+    $curl_httpheaders = array("Authorization: Bearer $token", "Content-Type: application/json");
 
     $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, $config["cm_url"] . "/consents");
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($context));
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array("Authorization: Bearer $token", "Content-Type: application/json"));
+    curl_setopt($curl, CURLOPT_URL, $curl_url);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $curl_postfields);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $curl_httpheaders);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($curl, CURLOPT_HEADERFUNCTION,
         function ($curl, $header) use (&$headers) {
@@ -95,17 +84,18 @@ function getFormUrl()
 <head>
     <meta charset="utf-8">
     <title>Simple Consent Integration v2 Example</title>
+    <script type="text/javascript" src="handlers.js"></script>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.11/iframeResizer.js"></script>
 </head>
 <body>
 <h2 style="text-align: center">Simple Consent v2 Integration Example</h2>
-<iframe src="<?php echo getFormUrl()?>" width="100%" title="Simple Consent v2 Integration Example Iframe" id="consent"
-        name="consent"></iframe>
-<script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.11/iframeResizer.js"></script>
-<script type="text/javascript">iFrameResize({
-        log: false,
-        checkOrigin: false,
-        heightCalculationMethod: 'max'
-    }, '#consent');</script>
+<iframe src="<?php echo getFormUrl() ?>"
+        width="100%"
+        title="Simple Consent v2 Integration Example Iframe"
+        id="consent"
+        name="consent"
+        onload="initIframeResizer('#consent');"
+></iframe>
 </body>
 </html>
