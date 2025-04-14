@@ -87,15 +87,38 @@ function getFormUrl()
     <script type="text/javascript" src="handlers.js"></script>
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.11/iframeResizer.js"></script>
+
+    <style>
+        body {
+                background-image: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+        }
+        iframe.seamless {
+                background-color: transparent;
+                border: 0px none transparent;
+                padding: 0px;
+                overflow: hidden;
+                width: 900px;
+        }
+        div.iframe-container {
+                display: grid;
+                place-items: center;
+        }
+    </style>
 </head>
 <body>
-<h2 style="text-align: center">Simple Consent v2 Integration Example</h2>
-<iframe src="<?php echo getFormUrl() ?>"
-        width="100%"
-        title="Simple Consent v2 Integration Example Iframe"
-        id="consent"
-        name="consent"
-        onload="initIframeResizer('#consent');"
-></iframe>
+    <div class=iframe-container>
+        <h2 style="text-align: center">Simple Consent v2 Integration Example</h2>
+        <iframe src="<?php echo getFormUrl() ?>"
+                width="100%"
+                title="Simple Consent v2 Integration Example Iframe"
+                id="consent"
+                name="consent"
+                onload="initIframeResizer('#consent');"
+                class=seamless
+        ></iframe>
+    </div>
 </body>
 </html>
