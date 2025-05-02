@@ -8,6 +8,7 @@ function getConf()
     $config["auth_username"] = key_exists("AUTH_USERNAME", $_ENV) ? $_ENV["AUTH_USERNAME"] : $config["auth_username"];
     $config["auth_password"] = key_exists("AUTH_PASSWORD", $_ENV) ? $_ENV["AUTH_PASSWORD"] : $config["auth_password"];
     $config["cm_url"] = key_exists("CM_URL", $_ENV) ? $_ENV["CM_URL"] : $config["cm_url"];
+    $config["cm_key"] = key_exists("CM_KEY", $_ENV) ? $_ENV["CM_KEY"] : $config["cm_key"];
     return $config;
 }
 
@@ -47,13 +48,18 @@ function getFormUrl()
 {
     $token = getToken();
     $config = getConf();
+    $cm_key =  $config["cm_key"];
 
     $context = getPayload();
     $context["subject"] = array_key_exists("uuid", $_GET) ? $_GET["uuid"] : uniqid();
 
     $curl_url = $config["cm_url"] . "/consents";
     $curl_postfields = json_encode($context);
-    $curl_httpheaders = array("Authorization: Bearer $token", "Content-Type: application/json");
+    if(!empty($cm_key)){
+        $curl_httpheaders = array("CM-Key: $cm_key", "Content-Type: application/json");
+    } else {
+        $curl_httpheaders = array("Authorization: Bearer $token", "Content-Type: application/json");
+    }
 
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL, $curl_url);
